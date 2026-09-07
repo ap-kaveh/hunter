@@ -1,0 +1,3 @@
+model:
+  mode: mock
+data_dir: data

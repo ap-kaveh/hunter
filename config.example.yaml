@@ -1,0 +1,45 @@
+# Paths are evaluated INSIDE the container. Copy to config.yaml and edit locally.
+# Secrets belong in mounted files, never in this YAML or source control.
+splunk:
+  url: https://sh3:8089
+  web_url: null
+  token_file: /run/secrets/splunk_token
+  ca_file: /etc/soc-hunter/certs/internal-ca.pem
+  indexes:
+    firewall: fw
+    waf: fwb
+  timestamp_validated: false
+  page_size: 500
+  max_results: 20000
+  search_timeout_seconds: 300
+model:
+  mode: mock  # live is required for real hunts
+  base_url: http://127.0.0.1:8000/v1
+  name: Qwen/Qwen3.6-27B-FP8
+  api_key_file: /run/secrets/model_api_key
+  max_tokens: 2048
+  max_input_chars: 24000
+postgres:
+  host: PG_PRIMARY_ENDPOINT
+  port: 5432
+  database: soc_hunter
+  username: soc_hunter
+  password_file: /run/secrets/postgres_password
+  sslmode: verify-full
+  ca_file: /etc/soc-hunter/certs/postgres-ca.pem
+zammad:
+  enabled: false
+  url: https://ZAMMAD_HOST
+  token_file: /run/secrets/zammad_token
+  ca_file: /etc/soc-hunter/certs/internal-ca.pem
+  group_id: 1  # replace with actual SOC group ID
+  customer_id: null  # dedicated internal service identity; required to publish
+  tier2_role_ids: []  # actual Zammad role IDs, not user-supplied role names
+  approval_enforcement_verified: false
+hunts:
+  max_window_hours: 12
+  baseline_days: 14
+  max_candidates: 20
+  evidence_per_candidate: 20
+  max_followups: 2
+data_dir: /var/lib/soc-hunter

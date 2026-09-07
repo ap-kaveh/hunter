@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SOC Hunter · Operations</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <script src="/assets/app.js" defer></script>
+</head>
+<body>
+<section id="login-screen" class="login-screen">
+  <form id="login-form" class="login-card">
+    <div class="brand-mark">H</div><p class="eyebrow">PRIVATE SECURITY OPERATIONS</p>
+    <h1>SOC Hunter</h1><p class="muted">Sign in to your on-premises investigation workspace.</p>
+    <label>Username<input name="username" autocomplete="username" value="admin" required></label>
+    <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+    <button class="primary" type="submit">Sign in <span>→</span></button>
+    <p id="login-error" class="error" role="alert"></p>
+    <small>Local inference. Evidence stays on premises.</small>
+  </form>
+</section>
+<div id="workspace" class="workspace hidden">
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">H</span><div>SOC Hunter<small>OPERATIONS WORKSPACE</small></div></div>
+    <div class="environment"><span class="dot"></span> On-premises · Development</div>
+    <nav aria-label="Main navigation">
+      <button class="nav active" data-view="hunts"><span>◫</span> Hunts</button>
+      <button class="nav" data-view="connections"><span>⌁</span> Connections</button>
+      <button class="nav" data-view="configuration"><span>⚙</span> Configuration</button>
+      <button class="nav" data-view="readiness"><span>✓</span> Deployment readiness</button>
+    </nav>
+    <div class="sidebar-bottom"><div class="privacy">A controlled investigation workflow</div>
+    <p>AI recommends. Analysts decide.<br>Tier 2 approves false-positive closure.</p>
+    <button id="logout" class="logout">Sign out ↗</button></div>
+  </aside>
+  <main>
+    <header class="topbar"><span id="breadcrumb">Workspace / Hunts</span><div><span class="local-pill">LOCAL WORKSPACE</span><span class="avatar">A</span></div></header>
+    <div id="notice" class="notice hidden" role="status"></div>
+    <section id="view-hunts" class="view">
+      <div class="page-heading"><div><p class="eyebrow">INVESTIGATION CONTROL</p><h1>Hunts</h1><p class="muted">Choose a window. Follow the evidence. Keep the context.</p></div>
+      <div class="actions"><button id="demo-start" class="secondary">Run a demo</button><button id="new-hunt" class="primary">＋ New hunt</button></div></div>
+      <div class="metrics"><article><span>ACTIVE HUNTS</span><strong id="metric-active">0</strong><small>One investigation worker</small></article>
+      <article><span>COMPLETED RUNS</span><strong id="metric-complete">0</strong><small>Demo and live runs are labeled</small></article>
+      <article><span>FINDINGS SAVED</span><strong id="metric-findings">0</strong><small>AI assessments remain unreviewed</small></article>
+      <article><span>DEFAULT WINDOW</span><strong>12<span class="unit">h</span></strong><small>Earlier history provides a baseline</small></article></div>
+      <div class="workspace-grid">
+        <article class="panel"><div class="panel-title"><h2>Investigation history</h2><span id="run-count" class="muted">0 runs</span></div>
+        <div class="table-wrap"><table><thead><tr><th>Hunt / window</th><th>Status</th><th>Findings</th><th>Started</th></tr></thead><tbody id="jobs-table"></tbody></table></div>
+        <div id="empty-state" class="empty"><div class="empty-icon">⌕</div><h3>Your first hunt starts here.</h3><p>Try the synthetic demo to explore progress, stop and resume.<br>Configure your connections before starting a live hunt.</p></div></article>
+        <article class="panel detail-panel"><div class="panel-title"><h2>Run detail</h2><span class="dot"></span></div><div id="run-detail" class="detail-content"><p class="muted">Select a hunt to see its progress and coverage.</p><div class="flow-preview"><span>01 · Gather evidence</span><span>02 · Investigate candidates</span><span>03 · Save findings</span><span>04 · Review in Zammad</span></div></div></article>
+      </div>
+      <div class="footnote">Demo runs use synthetic logs and a simulated model. They never create Zammad tickets.</div>
+    </section>
+    <section id="view-connections" class="view hidden">
+      <div class="page-heading"><div><p class="eyebrow">INTERNAL SERVICES</p><h1>Connections</h1><p class="muted">Check reachability and authentication without creating tickets or changing service data.</p></div></div>
+      <div id="connection-cards" class="connection-grid"></div>
+      <div class="callout">Connection tests verify access, not end-to-end hunt readiness. Index permissions, model behavior and Tier 2 closure enforcement need separate validation.</div>
+    </section>
+    <section id="view-configuration" class="view hidden">
+      <div class="page-heading"><div><p class="eyebrow">WORKSPACE SETTINGS</p><h1>Configuration</h1><p class="muted">Settings are saved locally. Active and resumed hunts use their original snapshot.</p></div><button id="save-config" class="primary">Save configuration</button></div>
+      <form id="settings-form" class="settings-grid"></form>
+      <details class="panel advanced"><summary>Advanced YAML configuration</summary><p class="muted">All thresholds, paths and limits. Changes here are saved separately from the form above.</p><textarea id="yaml-editor" spellcheck="false" aria-label="Advanced YAML configuration"></textarea><button id="save-yaml" class="secondary">Validate & save YAML</button></details>
+    </section>
+    <section id="view-readiness" class="view hidden">
+      <div class="page-heading"><div><p class="eyebrow">PILOT TO PRODUCTION</p><h1>Deployment readiness</h1><p class="muted">The development environment is ready to test. Live service validation remains explicit.</p></div></div>
+      <article class="panel checklist"><h2>Before the first live hunt</h2>
+        <p><b>01</b><span>Validate FortiWeb attack fields and Splunk timestamps.<small>Cross-source follow-up stays disabled until timestamps are verified.</small></span></p>
+        <p><b>02</b><span>Configure sh3, PostgreSQL, and the model endpoint.<small>Use the HA database's writable endpoint and trusted internal certificates.</small></span></p>
+        <p><b>03</b><span>Benchmark Qwen on the RTX 5880.<small>The dashboard uses no GPU. The live model runs on the deployment server.</small></span></p>
+        <p><b>04</b><span>Validate Zammad's Tier 2 approval workflow.<small>The configuration flag records verification; it does not create Zammad permissions.</small></span></p>
+        <p><b>05</b><span>Stage and test the offline deployment bundle.<small>Pin container images and model files, then test with internet access blocked.</small></span></p>
+      </article>
+    </section>
+  </main>
+</div>
+<dialog id="hunt-dialog"><form id="hunt-form"><div class="dialog-heading"><h2>Start a live hunt</h2><button type="button" id="close-dialog" class="icon-button" aria-label="Close">×</button></div>
+  <p class="muted">Analyze FortiWeb activity and gather related evidence. No tickets are created by this action.</p>
+  <label>Start time (your browser's local timezone)<input id="hunt-start" type="datetime-local" required></label>
+  <label>End time (exclusive)<input id="hunt-end" type="datetime-local" required></label>
+  <div class="callout">A live model and PostgreSQL schema are required. Maximum window is controlled by your configuration.</div>
+  <button type="submit" class="primary full-width">Start investigation →</button>
+</form></dialog>
+</body></html>

@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "soc-hunter"
+version = "0.1.0"
+description = "On-premises, manually initiated Fortinet threat investigations"
+requires-python = ">=3.12"
+dependencies = ["httpx>=0.28,<0.29", "pydantic>=2.10,<3", "PyYAML>=6,<7", "psycopg[binary]>=3.2,<4", "tzdata>=2025.1", "fastapi>=0.115,<1", "uvicorn>=0.34,<1"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10", "ruff>=0.11,<1"]
+
+[project.scripts]
+soc-hunter = "soc_hunter.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+soc_hunter = ["web/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]

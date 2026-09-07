@@ -1,0 +1,24 @@
+[Unit]
+Description=SOC Hunter development dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=soc-hunter
+Group=soc-hunter
+WorkingDirectory=/opt/soc-hunter
+ExecStart=/opt/soc-hunter/.venv/bin/soc-hunter --config /var/lib/soc-hunter/config.yaml serve --ui-dir /var/lib/soc-hunter/ui --host 0.0.0.0 --port 8443 --tls-cert /var/lib/soc-hunter/ui/tls/cert.pem --tls-key /var/lib/soc-hunter/ui/tls/key.pem
+Restart=on-failure
+RestartSec=3
+KillSignal=SIGINT
+TimeoutStopSec=20
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/soc-hunter
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
