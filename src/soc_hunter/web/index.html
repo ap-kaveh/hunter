@@ -26,6 +26,7 @@
       <button class="nav active" data-view="hunts"><span>◫</span> Hunts</button>
       <button class="nav" data-view="connections"><span>⌁</span> Connections</button>
       <button class="nav" data-view="configuration"><span>⚙</span> Configuration</button>
+      <button class="nav" data-view="rules"><span>⌕</span> Hunting rules</button>
       <button class="nav" data-view="readiness"><span>✓</span> Deployment readiness</button>
     </nav>
     <div class="sidebar-bottom"><div class="privacy">A controlled investigation workflow</div>
@@ -60,6 +61,11 @@
       <form id="settings-form" class="settings-grid"></form>
       <details class="panel advanced"><summary>Advanced YAML configuration</summary><p class="muted">All thresholds, paths and limits. Changes here are saved separately from the form above.</p><textarea id="yaml-editor" spellcheck="false" aria-label="Advanced YAML configuration"></textarea><button id="save-yaml" class="secondary">Validate & save YAML</button></details>
     </section>
+    <section id="view-rules" class="view hidden">
+      <div class="page-heading"><div><p class="eyebrow">EXPLAINABLE DETECTIONS</p><h1>Hunting rules</h1><p class="muted">Five-minute screening patterns. Every result needs investigation and analyst review.</p></div></div>
+      <p id="rules-version" class="muted"></p><div id="rule-cards" class="connection-grid"></div>
+      <div class="callout">Thresholds are starting values, not universal standards. Tune them in Configuration → Advanced YAML. Use hunts.disabled_rules to disable individual rule IDs. Disabling a rule affects future candidates and does not close existing findings.</div>
+    </section>
     <section id="view-readiness" class="view hidden">
       <div class="page-heading"><div><p class="eyebrow">PILOT TO PRODUCTION</p><h1>Deployment readiness</h1><p class="muted">The development environment is ready to test. Live service validation remains explicit.</p></div></div>
       <article class="panel checklist"><h2>Before the first live hunt</h2>
@@ -73,7 +79,7 @@
   </main>
 </div>
 <dialog id="hunt-dialog"><form id="hunt-form"><div class="dialog-heading"><h2>Start a live hunt</h2><button type="button" id="close-dialog" class="icon-button" aria-label="Close">×</button></div>
-  <p class="muted">Analyze FortiWeb activity and gather related evidence. No tickets are created by this action.</p>
+  <p class="muted">Analyze FortiGate and FortiWeb activity. No tickets are created by this action.</p>
   <label>Start time (your browser's local timezone)<input id="hunt-start" type="datetime-local" required></label>
   <label>End time (exclusive)<input id="hunt-end" type="datetime-local" required></label>
   <div class="callout">A live model and PostgreSQL schema are required. Maximum window is controlled by your configuration.</div>

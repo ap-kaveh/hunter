@@ -47,6 +47,8 @@ def test_demo_has_expected_candidates_and_never_confirms_attack(tmp_path):
         "multiple_attack_types",
         "high_severity_detection",
         "shared_signature_cluster",
+        "waf_error_probe",
+        "waf_alert_only_detection",
     }
 
 

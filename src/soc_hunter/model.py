@@ -13,6 +13,9 @@ Only request tools listed in available_tools. Firewall source lookup is contextu
 connections; it does not establish a shared request. A WAF signature is not proof of an attack, HTTP 200
 is not proof of exploitation, and a blocked real attack is not a false positive. Historical frequency
 alone cannot establish benignness. Do not infer compromise without direct supporting evidence.
+HTTP 401/403 alone is not proof of a login failure or credential stuffing. Configuration changes may
+be authorized. Antivirus/IPS detections do not prove execution. Session reset actions do not by
+themselves prove security blocking. Consider scanners, NAT, outages and approved change records.
 On finish, report must contain: assessment (likely_true_positive, likely_false_positive, inconclusive),
 outcome (apparently_blocked, suspicious_activity_allowed, evidence_of_compromise, unknown), summary,
 claims (list of {text, evidence_ids}), alternatives, gaps, next_steps. Every claim needs actual supplied
@@ -66,10 +69,10 @@ class Investigator:
             "available_tools": available,
             "gaps": gaps,
         }
+        if len(json.dumps(payload)) > self.config.max_input_chars:
+            payload["gaps"] = gaps + ["Model input evidence reduced to fit configured context budget"]
         while len(json.dumps(payload)) > self.config.max_input_chars and len(payload["evidence"]) > 1:
             payload["evidence"].pop()
-        if len(payload["evidence"]) < len(evidence):
-            payload["gaps"] = gaps + ["Model input evidence reduced to fit configured context budget"]
         if len(json.dumps(payload)) > self.config.max_input_chars:
             raise ValueError("Candidate exceeds model input budget")
         response = self.client.post(

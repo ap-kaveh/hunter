@@ -7,8 +7,8 @@ Includes a local operations dashboard. No scheduler, run tickets, automatic WAF 
 
 - YAML configuration; secrets in separate files; verified TLS for Splunk, PostgreSQL and Zammad.
 - Direct Splunk search-job API connection to `sh3`. Submit, poll and paginated retrieval stay on that member.
-- Five-minute WAF aggregation over a bounded hunt window (maximum 12 hours by default).
-- Six explainable candidate rules: path enumeration, multiple attack types, high-severity detections,
+- Five-minute WAF and firewall aggregation over a bounded hunt window (maximum 12 hours by default).
+- Seventeen explainable candidate rules (ten WAF and seven firewall). See [RULES.md](RULES.md). WAF rules include path enumeration, multiple attack types, high-severity detections,
   sensitive-endpoint volume, historical rate deviation, and shared-signature source clusters.
 - Approved WAF/firewall evidence lookups. The model cannot execute arbitrary SPL, shell commands or URLs.
 - Structured model output with supplied-event citation validation. Citation existence is checked;
@@ -137,7 +137,7 @@ is not yet implemented; avoid publishing repeated overlapping hunts in the pilot
 - Attack payload inspection is therefore limited. Findings must acknowledge that limitation.
 - WAF buckets count log events, not guaranteed distinct HTTP requests; traffic and attack logs may describe
   the same request. Validate shared identifiers before using these counts as request counts.
-- All six rules screen WAF data. Firewall source-address lookups add context; they do not yet implement
+- Seven rules screen firewall traffic, UTM and administrative events, grouped by source/device/VDOM. They do not yet implement
   outbound anomaly/beaconing algorithms or WAF backend NAT correlation.
 - Source/application normalization and attack fields need validation with real attack logs.
 - The shared-signature rule finds clusters; a common signature alone does not prove coordinated activity.
@@ -156,10 +156,10 @@ is not yet implemented; avoid publishing repeated overlapping hunts in the pilot
 Build on the VM after installing the locked dependencies:
 
 ```bash
-podman build -t localhost/soc-hunter:0.1.0 -f Containerfile .
+podman build -t localhost/soc-hunter:0.2.0 -f Containerfile .
 podman run --rm --network=none \
   --tmpfs /var/lib/soc-hunter:rw,mode=1777 \
-  localhost/soc-hunter:0.1.0 \
+  localhost/soc-hunter:0.2.0 \
   --config /app/config.demo.yaml demo --output /var/lib/soc-hunter/demo
 ```
 
@@ -170,9 +170,9 @@ Use internal DNS/network routing appropriate to your VLAN. The model server is a
 on the deployment server and is not bundled into this CPU development image.
 
 ```bash
-podman save --format oci-archive -o soc-hunter-0.1.0.oci.tar localhost/soc-hunter:0.1.0
+podman save --format oci-archive -o soc-hunter-0.2.0.oci.tar localhost/soc-hunter:0.2.0
 # On the server:
-podman load -i soc-hunter-0.1.0.oci.tar
+podman load -i soc-hunter-0.2.0.oci.tar
 ```
 
 Before disconnected deployment, also stage the exact tested vLLM image, model/tokenizer files, and any

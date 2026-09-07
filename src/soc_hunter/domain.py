@@ -46,10 +46,17 @@ class Event(StrictModel):
     bytes_out: int = 0
     bytes_in: int = 0
     session_id: str = ""
+    subtype: str = ""
+    auth_status: str = ""
+    config_path: str = ""
+    vdom: str = "unknown"
     warnings: list[str] = Field(default_factory=list)
 
 
 class Bucket(StrictModel):
+    source: Literal["waf", "firewall"] = "waf"
+    device: str = "unknown"
+    vdom: str = "unknown"
     timestamp: datetime
     src: str
     application: str
@@ -62,9 +69,26 @@ class Bucket(StrictModel):
     sensitive: int = 0
     high: int = 0
     sample_paths: list[str] = Field(default_factory=list)
+    traffic_count: int = 0
+    traffic_paths: int = 0
+    client_errors: int = 0
+    server_errors: int = 0
+    auth_rejects: int = 0
+    alert_only: int = 0
+    ports: int = 0
+    destinations: int = 0
+    denied: int = 0
+    ips_high: int = 0
+    malware: int = 0
+    admin_failures: int = 0
+    config_changes: int = 0
 
 
 class Candidate(StrictModel):
+    ruleset: str = "legacy"
+    source: Literal["waf", "firewall"] = "waf"
+    device: str = "unknown"
+    vdom: str = "unknown"
     key: str
     hunts: list[str]
     src: str

@@ -12,7 +12,9 @@ def ticket_text(finding: Finding):
         f"Window: {finding.window_start.isoformat()} to {finding.window_end.isoformat()} (end exclusive)",
         f"Application: {finding.candidate.application}",
         f"Source: {finding.candidate.src}",
+        f"Log source: {finding.candidate.source}; device: {finding.candidate.device}; VDOM: {finding.candidate.vdom}",
         f"Hunts: {', '.join(finding.candidate.hunts)}",
+        f"Ruleset: {finding.candidate.ruleset}",
         f"Model: {finding.model}",
         "AI recommendation — UNREVIEWED",
         f"Assessment: {report.assessment}",
@@ -35,6 +37,7 @@ def ticket_text(finding: Finding):
             f"- {event.id} | {event.timestamp.isoformat()} | {event.source} | "
             f"{event.src} -> {event.dst}:{event.dst_port} | {event.method} {event.path} | "
             f"HTTP {event.status} | action={event.action} | signature={event.signature}"
+            f" | subtype={event.subtype} | auth_status={event.auth_status} | config_path={event.config_path}"
         )
     lines += [
         "",

@@ -7,7 +7,7 @@ from .config import load_config
 from .domain import utc
 from .fixtures import demo_records
 from .runner import hunt, write_report
-from .splunk import Splunk, summary_query
+from .splunk import Splunk, firewall_summary_query, summary_query
 from .storage import FileStore, PostgresStore, connect
 from .zammad import Zammad, publish
 
@@ -68,6 +68,8 @@ def main():
             )
         elif args.command == "plan":
             print(summary_query(config.splunk, config.hunts))
+            if config.hunts.firewall_enabled:
+                print("\n" + firewall_summary_query(config.splunk))
         elif args.command == "demo":
             if config.model.mode != "mock":
                 raise ValueError("Demo requires model.mode=mock")

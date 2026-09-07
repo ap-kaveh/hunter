@@ -1,37 +1,27 @@
-# SOC Hunter 0.1.0 development pilot
+# SOC Hunter 0.2.0 development pilot
 
-Dashboard: https://hunter.example.internal:8443 (development certificate).
-The service is enabled at boot and currently restricted to the laptop address <operator-laptop-IP>.
-Username: admin. Initial password is stored only on the VM at /var/lib/soc-hunter/ui/initial-password.txt.
+Adds eleven detection rules: seven FortiGate rules and four FortiWeb rules, bringing the total to 17.
+See RULES.md for logic, thresholds, required fields, source references, tuning and limitations.
 
-Implemented: authenticated web dashboard, manual windows up to 12 hours, synthetic demo,
-progress/history/reports, stop and resume, configuration editor, secret replacement, connection tests,
-six WAF screening rules, bounded model investigation, PostgreSQL storage, and guarded findings-only
-Zammad publication. Demo results are synthetic and cannot be published.
+Firewall candidates now receive firewall evidence directly, scoped to device and VDOM. Unknown-source
+configuration changes can be reviewed by device. Timestamp validation still gates cross-source lookup.
+The dashboard includes an authenticated Hunting rules page. Rules can be disabled individually in YAML;
+firewall screening also has a form checkbox. Each run records its ruleset and effective rule settings.
+Common benign explanations are preserved in findings. Tier 2 approval requirements are unchanged.
 
-Verification: 46 tests passed, including disposable PostgreSQL integration. The final container
-passed both a CLI demo and dashboard/login/worker/report checks with networking disabled.
-Stop/resume was tested against the running HTTPS service. Automated browser visual inspection
-was blocked by the development certificate; the user opened the dashboard independently.
+This release also fixes model evidence trimming to account for the added context-reduction notice.
 
-This is a development pilot. Live Splunk, production PostgreSQL, Zammad and GPU inference have
-not been validated. No real tickets were created. Tier 2 permission enforcement must be configured
-and tested in Zammad; review synchronization is not implemented. Timestamp alignment and field
-extraction require validation before cross-source hunts. See README.md for coverage limitations.
-
-## Files and service
+## Upgrade
 
 Source: /opt/soc-hunter
 Configuration: /var/lib/soc-hunter/config.yaml
-State and secrets: /var/lib/soc-hunter/ui
+State: /var/lib/soc-hunter/ui
 Service: soc-hunter.service
-Container archive: /opt/soc-hunter-release/soc-hunter-0.1.0.oci.tar
-Image ID: a6a451714e07d87e61f337ac969be31d5842fc33b2712ae00905404b4a8c7ba7
+Container: localhost/soc-hunter:0.2.0
 
-Use Connections to enter service secrets and test each integration, and Configuration to set
-endpoints and hunt settings. Saved configuration applies to new hunts. Resume retains the
-original run configuration. Start with Run demo; it needs no external service.
+Existing configuration uses defaults for the new thresholds. Firewall screening defaults to enabled.
+Old saved reports remain readable. Start a new hunt after upgrading; do not resume a 0.1.0 hunt
+under the changed ruleset. Back up source before upgrade and keep state and secrets outside it.
 
-For disconnected deployment, load the application OCI archive using Podman. Model weights,
-vLLM and NVIDIA container runtime are separate dependencies and are not included. Follow the
-README deployment steps and benchmark the model on the RTX 5880 before live use.
+Real Splunk field extraction and query execution, production PostgreSQL, Zammad and GPU inference
+still need site validation. No real tickets are created by tests. The demo uses synthetic data.

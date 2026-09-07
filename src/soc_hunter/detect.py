@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from .config import HuntConfig
 from .domain import Bucket, Candidate, fingerprint
+from .rules import RULESET_VERSION
 
 
 def detect(
@@ -15,18 +16,28 @@ def detect(
         normal_peaks[key] = max(normal_peaks[key], row.count)
 
     def add(row, hunt, signal, priority=50):
-        key = (row.src, row.application)
-        if row.src == "unknown" or row.application == "unknown":
+        if hunt in config.disabled_rules:
+            return
+        key = (
+            (row.source, row.device, row.vdom, row.src, row.application)
+            if row.source == "firewall"
+            else (row.src, row.application)
+        )
+        if (row.src == "unknown" and row.source == "waf") or row.application == "unknown":
             return
         if key not in candidates:
             candidates[key] = Candidate(
-                key=fingerprint(*key),
+                key=fingerprint(RULESET_VERSION, *key),
+                ruleset=RULESET_VERSION,
                 hunts=[],
                 src=row.src,
                 application=row.application,
                 severity="medium",
                 signals=[],
                 priority=priority,
+                source=row.source,
+                device=row.device,
+                vdom=row.vdom,
             )
         candidate = candidates[key]
         if hunt not in candidate.hunts:
@@ -39,6 +50,97 @@ def detect(
 
     campaigns = defaultdict(list)
     for row in current:
+        if row.source == "firewall":
+            if not config.firewall_enabled or row.device == "unknown":
+                continue
+            checks = [
+                (
+                    row.traffic_count >= config.fw_scan_min_events and row.ports >= config.fw_scan_min_ports,
+                    "fw_many_ports",
+                    f"{row.ports} destination ports across {row.traffic_count} traffic logs",
+                    60,
+                ),
+                (
+                    row.traffic_count >= config.fw_scan_min_events
+                    and row.destinations >= config.fw_scan_min_destinations,
+                    "fw_many_destinations",
+                    f"{row.destinations} destinations across {row.traffic_count} traffic logs",
+                    60,
+                ),
+                (
+                    row.denied >= config.fw_deny_min_events,
+                    "fw_deny_burst",
+                    f"{row.denied} explicit deny logs",
+                    50,
+                ),
+                (
+                    row.ips_high > 0,
+                    "fw_ips_high",
+                    f"{row.ips_high} high/critical IPS detections; outcome unverified",
+                    85,
+                ),
+                (
+                    row.malware > 0,
+                    "fw_malware_detection",
+                    f"{row.malware} antivirus detections; execution unproven",
+                    85,
+                ),
+                (
+                    row.admin_failures >= config.fw_admin_fail_min_events,
+                    "fw_admin_failures",
+                    f"{row.admin_failures} failed administrator login events",
+                    75,
+                ),
+                (
+                    row.config_changes > 0,
+                    "fw_config_change",
+                    f"{row.config_changes} configuration changes; authorization unverified",
+                    65,
+                ),
+            ]
+            for triggered, name, signal, priority in checks:
+                if row.src == "unknown" and name not in (
+                    "fw_config_change",
+                    "fw_ips_high",
+                    "fw_malware_detection",
+                ):
+                    continue
+                if triggered:
+                    add(row, name, signal + " in five minutes", priority)
+            continue
+        if (
+            row.client_errors >= config.waf_error_min_events
+            and row.traffic_count
+            and row.client_errors / row.traffic_count >= config.waf_error_min_ratio
+            and row.traffic_paths >= config.scan_min_paths
+        ):
+            add(
+                row,
+                "waf_error_probe",
+                f"{row.client_errors}/{row.traffic_count} traffic logs have 4xx status across {row.traffic_paths} paths in five minutes",
+                65,
+            )
+        if row.server_errors >= config.waf_server_error_min_events:
+            add(
+                row,
+                "waf_server_error_burst",
+                f"{row.server_errors} HTTP 5xx traffic logs in five minutes; availability issue or attack",
+                60,
+            )
+        if row.auth_rejects >= config.waf_auth_reject_min_events:
+            add(
+                row,
+                "waf_auth_rejection_burst",
+                f"{row.auth_rejects} HTTP 401/403 traffic logs in five minutes; authentication attack unproven",
+                65,
+            )
+        if row.alert_only >= config.waf_alert_min_events:
+            add(
+                row,
+                "waf_alert_only_detection",
+                f"{row.alert_only} alert-only attack logs in five minutes; other controls may still block",
+                75,
+            )
         if row.paths >= config.scan_min_paths and row.count >= config.scan_min_requests:
             add(
                 row,

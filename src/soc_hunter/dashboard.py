@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 
 from .config import Config, load_config
 from .jobs import Jobs, atomic_json
+from .rules import RULESET_VERSION, catalog
 
 
 def init_admin(directory):
@@ -127,6 +128,10 @@ def create_app(config_path, data_dir, secure_cookie=True):
     @app.get("/api/session")
     def session(current=Depends(authenticated)):
         return {"username": "admin", "csrf": current["csrf"]}
+
+    @app.get("/api/rules")
+    def rules(current=Depends(authenticated)):
+        return {"version": RULESET_VERSION, "rules": catalog(load_config(config_path).hunts)}
 
     @app.post("/api/logout")
     def logout(request: Request, response: Response, current=Depends(authenticated)):

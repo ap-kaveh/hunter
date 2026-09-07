@@ -5,8 +5,9 @@ from uuid import uuid4
 from .detect import detect
 from .domain import Finding
 from .model import Investigator
-from .normalize import aggregate, normalize
-from .splunk import buckets, evidence_query, summary_query
+from .normalize import aggregate, aggregate_firewall, normalize
+from .rules import RULES, RULESET_VERSION, catalog
+from .splunk import buckets, evidence_query, firewall_summary_query, summary_query
 from .storage import now
 from .zammad import ticket_text
 
@@ -37,7 +38,8 @@ def hunt(
         "window_end": end.isoformat(),
         "synthetic": synthetic,
         "model": config.model.name if not synthetic else "mock",
-        "config": {"hunts": config.hunts.model_dump(), "version": "0.1.0"},
+        "config": {"hunts": config.hunts.model_dump(), "version": "0.2.0", "ruleset": RULESET_VERSION},
+        "rule_catalog": catalog(config.hunts),
         "coverage_gaps": [],
         "finding_count": 0,
         "candidate_failures": [],
@@ -52,6 +54,7 @@ def hunt(
             or previous["synthetic"] != synthetic
             or previous["config"]["hunts"] != config.hunts.model_dump()
             or previous["model"] != run["model"]
+            or previous["config"].get("ruleset") != RULESET_VERSION
         ):
             raise ValueError("Resume requires the original window, model and hunt settings")
         run["id"] = resume_id
@@ -88,6 +91,8 @@ def hunt(
             baseline = aggregate(
                 [e for e in events if baseline_start <= e.timestamp < start], config.hunts.sensitive_paths
             )
+            if config.hunts.firewall_enabled:
+                current += aggregate_firewall([e for e in events if start <= e.timestamp < end])
             run["coverage_gaps"].append("Synthetic fixture only; no real-world coverage or AI verdict")
         else:
             if not config.splunk.timestamp_validated:
@@ -112,9 +117,25 @@ def hunt(
             if not baseline:
                 baseline_complete = False
                 run["coverage_gaps"].append("No baseline returned; rate-deviation rule disabled")
+            if config.hunts.firewall_enabled:
+                checkpoint("searching_firewall")
+                firewall = splunk.search(firewall_summary_query(config.splunk), start, end)
+                current += buckets(firewall)
+                if firewall.truncated or firewall.warnings:
+                    run["coverage_gaps"].append(
+                        "Firewall aggregation is incomplete; firewall candidates may be missed"
+                    )
+                if not firewall.rows:
+                    run["coverage_gaps"].append(
+                        "No firewall buckets returned; check collection and permissions before interpreting coverage"
+                    )
+            else:
+                run["coverage_gaps"].append("Firewall screening disabled by configuration")
+        if any(row.source == "firewall" and row.device == "unknown" for row in current):
+            run["coverage_gaps"].append("Firewall buckets without a device ID are excluded from detection")
         if any(row.src == "unknown" or row.application == "unknown" for row in current):
             run["coverage_gaps"].append(
-                "Events with missing source/application cannot generate entity candidates"
+                "Missing source/application fields limit entity detection; device-scoped security/configuration events may still be reviewed"
             )
         all_candidates = detect(current, baseline, config.hunts, baseline_complete)
         run["candidate_count"] = len(all_candidates)
@@ -125,7 +146,7 @@ def hunt(
                 f"Candidate budget reached: {len(all_candidates) - config.hunts.max_candidates} deferred"
             )
         run["coverage_gaps"].append(
-            "Phase one screens WAF events; firewall is contextual enrichment, not a full firewall hunt"
+            "Rules identify hypotheses, not confirmed attacks. Missing event categories/fields can hide detections; validate collection."
         )
         run["candidate_budget"] = min(len(all_candidates), config.hunts.max_candidates)
         checkpoint("investigating")
@@ -142,6 +163,7 @@ def hunt(
                 gaps = list(run["coverage_gaps"])
 
                 def fetch(source, application=None):
+                    scoped = source == "firewall" and candidate.source == "firewall"
                     if synthetic:
                         selected = [
                             e
@@ -150,13 +172,21 @@ def hunt(
                             and start <= e.timestamp < end
                             and (e.src == candidate.src or (source == "firewall" and e.dst == candidate.src))
                             and (not application or e.application == application)
+                            and (not scoped or (e.device == candidate.device and e.vdom == candidate.vdom))
                         ]
                         selected.sort(key=lambda e: (e.event_type != "attack", e.timestamp))
                         if len(selected) > config.hunts.evidence_per_candidate:
                             gaps.append("Evidence is a bounded selection, not every matching event")
                         return selected[: config.hunts.evidence_per_candidate]
                     result = splunk.search(
-                        evidence_query(config.splunk, source, candidate.src, application),
+                        evidence_query(
+                            config.splunk,
+                            source,
+                            candidate.src,
+                            application,
+                            candidate.device if scoped else None,
+                            candidate.vdom if scoped else None,
+                        ),
                         start,
                         end,
                         config.hunts.evidence_per_candidate,
@@ -173,10 +203,12 @@ def hunt(
                         )
                     return selected
 
-                evidence = fetch("waf", candidate.application)
-                tools = ["waf_source"]
-                if config.splunk.timestamp_validated:
-                    tools.append("firewall_source")
+                evidence = fetch(
+                    candidate.source, candidate.application if candidate.source == "waf" else None
+                )
+                tools = [candidate.source + "_source"]
+                if config.splunk.timestamp_validated and candidate.src != "unknown":
+                    tools.append("firewall_source" if candidate.source == "waf" else "waf_source")
                 report = None
                 for step in range(config.hunts.max_followups + 1):
                     checkpoint("analyzing_evidence")
@@ -191,6 +223,11 @@ def hunt(
                 if report is None:
                     raise ValueError("Investigation ended without a valid final report")
                 # Preserve limitations even when the model omits them.
+                report.alternatives = list(
+                    dict.fromkeys(
+                        report.alternatives + [RULES[name]["alternatives"] for name in candidate.hunts]
+                    )
+                )
                 report.gaps = list(
                     dict.fromkeys(report.gaps + gaps + [w for e in evidence for w in e.warnings])
                 )

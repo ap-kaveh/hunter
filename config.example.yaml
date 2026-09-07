@@ -43,3 +43,17 @@ hunts:
   evidence_per_candidate: 20
   max_followups: 2
 data_dir: /var/lib/soc-hunter
+
+# Rule controls (under hunts)
+# firewall_enabled: true
+# disabled_rules: []
+# fw_scan_min_ports: 20
+# fw_scan_min_destinations: 20
+# fw_scan_min_events: 30
+# fw_deny_min_events: 100
+# fw_admin_fail_min_events: 5
+# waf_error_min_events: 30
+# waf_error_min_ratio: 0.8
+# waf_server_error_min_events: 20
+# waf_auth_reject_min_events: 20
+# waf_alert_min_events: 3

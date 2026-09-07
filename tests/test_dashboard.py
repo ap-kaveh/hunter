@@ -34,7 +34,23 @@ def test_dashboard_requires_authentication(dashboard):
     assert client.get("/").status_code == 200
     assert client.get("/api/config").status_code == 401
     assert client.get("/api/jobs").status_code == 401
+    assert client.get("/api/rules").status_code == 401
     assert client.get("/assets/../../admin.json").status_code == 404
+
+
+def test_rule_catalog_tracks_saved_controls(dashboard):
+    client, password, *_ = dashboard
+    headers = login(client, password)
+    rules = client.get("/api/rules").json()["rules"]
+    assert len(rules) == 17 and sum(r["source"] == "firewall" for r in rules) == 7
+    data = client.get("/api/config").json()["config"]
+    data["hunts"]["disabled_rules"] = ["waf_error_probe"]
+    data["hunts"]["firewall_enabled"] = False
+    assert client.put("/api/config", json={"yaml": json.dumps(data)}, headers=headers).status_code == 200
+    rules = client.get("/api/rules").json()["rules"]
+    assert all(not r["enabled"] for r in rules if r["source"] == "firewall" or r["id"] == "waf_error_probe")
+    data["hunts"]["disabled_rules"] = ["typo"]
+    assert client.put("/api/config", json={"yaml": json.dumps(data)}, headers=headers).status_code == 400
 
 
 def test_login_and_logout(dashboard):

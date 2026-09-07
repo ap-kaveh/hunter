@@ -103,6 +103,18 @@ class ZammadConfig(Endpoint):
 
 
 class HuntConfig(StrictModel):
+    disabled_rules: list[str] = Field(default_factory=list)
+    firewall_enabled: bool = True
+    fw_scan_min_ports: int = Field(default=20, ge=2)
+    fw_scan_min_destinations: int = Field(default=20, ge=2)
+    fw_scan_min_events: int = Field(default=30, ge=2)
+    fw_deny_min_events: int = Field(default=100, ge=2)
+    fw_admin_fail_min_events: int = Field(default=5, ge=2)
+    waf_error_min_events: int = Field(default=30, ge=2)
+    waf_error_min_ratio: float = Field(default=0.8, ge=0.1, le=1)
+    waf_server_error_min_events: int = Field(default=20, ge=2)
+    waf_auth_reject_min_events: int = Field(default=20, ge=2)
+    waf_alert_min_events: int = Field(default=3, ge=1)
     max_window_hours: int = Field(default=12, ge=1, le=24)
     baseline_days: int = Field(default=14, ge=1, le=30)
     max_candidates: int = Field(default=20, ge=1, le=100)
@@ -118,6 +130,15 @@ class HuntConfig(StrictModel):
     sensitive_paths: list[str] = Field(
         default_factory=lambda: ["/otp/", "/captcha", "/startpay", "/result.mellat"]
     )
+
+    @field_validator("disabled_rules")
+    @classmethod
+    def known_rules(cls, value):
+        from .rules import RULES
+
+        if set(value) - set(RULES):
+            raise ValueError("Unknown disabled rule ID")
+        return sorted(set(value))
 
 
 class Config(StrictModel):

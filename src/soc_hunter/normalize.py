@@ -84,13 +84,13 @@ def normalize(record: dict, source: str) -> Event:
     if fields.get("packet") or fields.get("packet.packet"):
         warnings.append("Request headers/body omitted; matched payload requires a sanitized analyst review")
     if source == "firewall":
-        app = fields.get("policyname", fields.get("policyid", "unknown"))
+        app = "firewall"
     return Event(
         id=identifier,
         timestamp=timestamp,
         source=source,
         device=safe_text(device),
-        src=safe_ip(fields.get("src", fields.get("srcip"))),
+        src=safe_ip(fields.get("srcip") or fields.get("src") or fields.get("remip")),
         original_src=safe_ip(fields.get("original_src")),
         dst=safe_ip(fields.get("dst", fields.get("dest", fields.get("dstip")))),
         dst_port=integer(fields.get("dst_port", fields.get("dstport"))),
@@ -101,12 +101,24 @@ def normalize(record: dict, source: str) -> Event:
         status=integer(fields.get("http_retcode")),
         action=safe_text(fields.get("action", "unknown")),
         attack_type=safe_text(fields.get("attack_type", "")),
-        signature=safe_text(fields.get("signature_subclass", "")),
-        severity=safe_text(fields.get("severity", fields.get("level", "unknown"))).lower(),
+        signature=safe_text(
+            fields.get("signature_subclass")
+            or fields.get("attack")
+            or fields.get("virus")
+            or fields.get("virusid")
+            or ""
+        ),
+        severity=safe_text(
+            fields.get("severity") or fields.get("severity_level") or fields.get("level", "unknown")
+        ).lower(),
         event_type=safe_text(fields.get("type", "traffic")),
         bytes_out=integer(fields.get("sentbyte", fields.get("http_request_bytes"))),
         bytes_in=integer(fields.get("rcvdbyte", fields.get("http_response_bytes"))),
         session_id=safe_text(fields.get("sessionid", fields.get("msg_id", ""))),
+        subtype=safe_text(fields.get("subtype", "")).lower(),
+        auth_status=safe_text(fields.get("status", "")).lower(),
+        config_path=safe_text(fields.get("cfgpath", "")),
+        vdom=safe_text(fields.get("vd", "unknown")),
         warnings=warnings,
     )
 
@@ -132,6 +144,57 @@ def aggregate(events: list[Event], sensitive_paths: list[str]) -> list[Bucket]:
             high=sum(e.event_type == "attack" and e.severity in ("high", "critical") for e in rows),
             sensitive=sum(any(p in e.path.lower() for p in sensitive_paths) for e in rows),
             sample_paths=sorted({e.path for e in rows})[:30],
+            traffic_count=sum(e.event_type == "traffic" for e in rows),
+            traffic_paths=len({e.path for e in rows if e.event_type == "traffic"}),
+            client_errors=sum(e.event_type == "traffic" and 400 <= e.status < 500 for e in rows),
+            server_errors=sum(e.event_type == "traffic" and 500 <= e.status < 600 for e in rows),
+            auth_rejects=sum(e.event_type == "traffic" and e.status in (401, 403) for e in rows),
+            alert_only=sum(e.event_type == "attack" and e.action.lower() == "alert" for e in rows),
         )
         for key, rows in groups.items()
     ]
+
+
+def aggregate_firewall(events: list[Event]) -> list[Bucket]:
+    groups = defaultdict(list)
+    for event in events:
+        if event.source == "firewall":
+            stamp = datetime.fromtimestamp(int(event.timestamp.timestamp()) // 300 * 300, timezone.utc)
+            groups[(stamp, event.src, event.device, event.vdom)].append(event)
+    result = []
+    for (stamp, src, device, vdom), rows in groups.items():
+        traffic = [e for e in rows if e.event_type == "traffic"]
+        result.append(
+            Bucket(
+                source="firewall",
+                timestamp=stamp,
+                src=src,
+                application="firewall",
+                device=device,
+                vdom=vdom,
+                count=len(rows),
+                paths=0,
+                errors=0,
+                attacks=0,
+                traffic_count=len(traffic),
+                ports=len({e.dst_port for e in traffic if e.dst_port}),
+                destinations=len({e.dst for e in traffic if e.dst != "unknown"}),
+                denied=sum(e.action.lower() == "deny" for e in traffic),
+                ips_high=sum(e.subtype == "ips" and e.severity in ("high", "critical") for e in rows),
+                malware=sum(e.subtype == "virus" and bool(e.signature) for e in rows),
+                admin_failures=sum(
+                    e.event_type == "event"
+                    and e.subtype == "system"
+                    and e.action.lower() == "login"
+                    and e.auth_status == "failed"
+                    for e in rows
+                ),
+                config_changes=sum(
+                    e.event_type == "event"
+                    and bool(e.config_path)
+                    and e.action.lower() in ("add", "edit", "delete")
+                    for e in rows
+                ),
+            )
+        )
+    return result
