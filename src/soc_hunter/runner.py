@@ -2,6 +2,7 @@ from datetime import timedelta
 from pathlib import Path
 from uuid import uuid4
 
+from . import __version__
 from .detect import detect
 from .domain import Finding
 from .model import Investigator
@@ -38,7 +39,7 @@ def hunt(
         "window_end": end.isoformat(),
         "synthetic": synthetic,
         "model": config.model.name if not synthetic else "mock",
-        "config": {"hunts": config.hunts.model_dump(), "version": "0.2.0", "ruleset": RULESET_VERSION},
+        "config": {"hunts": config.hunts.model_dump(), "version": __version__, "ruleset": RULESET_VERSION},
         "rule_catalog": catalog(config.hunts),
         "coverage_gaps": [],
         "finding_count": 0,

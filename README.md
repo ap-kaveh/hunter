@@ -156,10 +156,10 @@ is not yet implemented; avoid publishing repeated overlapping hunts in the pilot
 Build on the VM after installing the locked dependencies:
 
 ```bash
-podman build -t localhost/soc-hunter:0.2.0 -f Containerfile .
+podman build -t localhost/soc-hunter:0.3.0 -f Containerfile .
 podman run --rm --network=none \
   --tmpfs /var/lib/soc-hunter:rw,mode=1777 \
-  localhost/soc-hunter:0.2.0 \
+  localhost/soc-hunter:0.3.0 \
   --config /app/config.demo.yaml demo --output /var/lib/soc-hunter/demo
 ```
 
@@ -170,9 +170,9 @@ Use internal DNS/network routing appropriate to your VLAN. The model server is a
 on the deployment server and is not bundled into this CPU development image.
 
 ```bash
-podman save --format oci-archive -o soc-hunter-0.2.0.oci.tar localhost/soc-hunter:0.2.0
+podman save --format oci-archive -o soc-hunter-0.3.0.oci.tar localhost/soc-hunter:0.3.0
 # On the server:
-podman load -i soc-hunter-0.2.0.oci.tar
+podman load -i soc-hunter-0.3.0.oci.tar
 ```
 
 Before disconnected deployment, also stage the exact tested vLLM image, model/tokenizer files, and any
@@ -192,3 +192,9 @@ Do not point it at the production HA cluster. It creates test runs and synthetic
 4. Benchmark the pinned model/vLLM combination on the RTX 5880 using reviewed incidents.
 5. Configure and verify Zammad 6.5.2 Tier 2 closure permissions before enabling publication.
 6. Implement and test review synchronization, retention and cross-window ticket updates.
+
+## System monitoring
+
+The Monitoring page shows GPU utilization/VRAM/temperature/power, CPU/RAM/swap, filesystem space,
+disk I/O, network rates and available cgroup limits. It refreshes every five seconds while visible.
+No metrics are stored in PostgreSQL. See [MONITORING.md](MONITORING.md) for scope and deployment details.

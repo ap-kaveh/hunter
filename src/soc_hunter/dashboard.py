@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 
 from .config import Config, load_config
 from .jobs import Jobs, atomic_json
+from .monitor import Monitor
 from .rules import RULESET_VERSION, catalog
 
 
@@ -60,6 +61,7 @@ def create_app(config_path, data_dir, secure_cookie=True):
     credentials = json.loads((directory / "admin.json").read_text())
     sessions = {}
     failures = {}
+    monitor = Monitor(directory)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -132,6 +134,10 @@ def create_app(config_path, data_dir, secure_cookie=True):
     @app.get("/api/rules")
     def rules(current=Depends(authenticated)):
         return {"version": RULESET_VERSION, "rules": catalog(load_config(config_path).hunts)}
+
+    @app.get("/api/monitor")
+    def monitoring(current=Depends(authenticated)):
+        return monitor.snapshot()
 
     @app.post("/api/logout")
     def logout(request: Request, response: Response, current=Depends(authenticated)):

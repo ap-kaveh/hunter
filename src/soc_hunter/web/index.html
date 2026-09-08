@@ -27,6 +27,7 @@
       <button class="nav" data-view="connections"><span>⌁</span> Connections</button>
       <button class="nav" data-view="configuration"><span>⚙</span> Configuration</button>
       <button class="nav" data-view="rules"><span>⌕</span> Hunting rules</button>
+      <button class="nav" data-view="monitor"><span>▤</span> Monitoring</button>
       <button class="nav" data-view="readiness"><span>✓</span> Deployment readiness</button>
     </nav>
     <div class="sidebar-bottom"><div class="privacy">A controlled investigation workflow</div>
@@ -65,6 +66,18 @@
       <div class="page-heading"><div><p class="eyebrow">EXPLAINABLE DETECTIONS</p><h1>Hunting rules</h1><p class="muted">Five-minute screening patterns. Every result needs investigation and analyst review.</p></div></div>
       <p id="rules-version" class="muted"></p><div id="rule-cards" class="connection-grid"></div>
       <div class="callout">Thresholds are starting values, not universal standards. Tune them in Configuration → Advanced YAML. Use hunts.disabled_rules to disable individual rule IDs. Disabling a rule affects future candidates and does not close existing findings.</div>
+    </section>
+    <section id="view-monitor" class="view hidden">
+      <div class="page-heading"><div><p class="eyebrow">SYSTEM TELEMETRY</p><h1>Monitoring</h1><p class="muted">GPU, compute, storage and network activity. Refreshes every five seconds while this page is visible.</p></div></div>
+      <p id="monitor-status" role="status">Waiting for the first sample…</p>
+      <div id="monitor-scope" class="callout"></div>
+      <div id="monitor-metrics" class="metrics"></div>
+      <article class="panel monitoring-chart"><h2>Recent activity</h2><p class="muted">CPU (teal) · RAM (blue) · GPU devices (orange/purple) · 0–100%</p><canvas id="monitor-chart" width="1000" height="160" role="img" aria-label="Recent CPU, memory and GPU utilization history"></canvas><p id="monitor-history" class="muted"></p></article>
+      <h2>Visible GPUs</h2><p id="gpu-message" class="muted"></p><div id="gpu-cards" class="connection-grid"></div>
+      <div class="settings-grid"><article class="panel monitoring-table"><h2>Filesystem space</h2><div id="monitor-filesystems" class="table-wrap"></div></article><article class="panel monitoring-table"><h2>App resource limits</h2><div id="monitor-limits"></div></article></div>
+      <article class="panel monitoring-table"><h2>Disk I/O</h2><div id="monitor-disks" class="table-wrap"></div></article>
+      <article class="panel monitoring-table"><h2>Network</h2><div id="monitor-network" class="table-wrap"></div></article>
+      <div id="monitor-notes" class="footnote"></div>
     </section>
     <section id="view-readiness" class="view hidden">
       <div class="page-heading"><div><p class="eyebrow">PILOT TO PRODUCTION</p><h1>Deployment readiness</h1><p class="muted">The development environment is ready to test. Live service validation remains explicit.</p></div></div>

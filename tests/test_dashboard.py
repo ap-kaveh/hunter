@@ -35,6 +35,7 @@ def test_dashboard_requires_authentication(dashboard):
     assert client.get("/api/config").status_code == 401
     assert client.get("/api/jobs").status_code == 401
     assert client.get("/api/rules").status_code == 401
+    assert client.get("/api/monitor").status_code == 401
     assert client.get("/assets/../../admin.json").status_code == 404
 
 
@@ -59,6 +60,17 @@ def test_login_and_logout(dashboard):
     assert client.get("/api/session").status_code == 200
     assert client.post("/api/logout", headers=headers).status_code == 200
     assert client.get("/api/config").status_code == 401
+
+
+def test_monitor_requires_login_and_returns_metrics(dashboard):
+    client, password, *_ = dashboard
+    login(client, password)
+    response = client.get("/api/monitor")
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    data = response.json()
+    assert {"gpu", "cpu", "memory", "network", "disk_io", "history"} <= data.keys()
+    assert data["refresh_seconds"] == 5
 
 
 def test_csrf_and_foreign_origin_blocked(dashboard):
